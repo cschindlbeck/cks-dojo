@@ -178,14 +178,11 @@ minikube ssh -p cks-dojo -n cks-dojo-m02 -- sudo cat /var/lib/kubelet/config.yam
 forces every kubelet API caller through authenticated/authorized requests on
 the secure port (10250).
 
-**Note on this cluster:** on this minikube-provisioned worker, the
-kubeadm-generated `/var/lib/kubelet/config.yaml` already ships with
-`authentication.anonymous.enabled: false` and no `readOnlyPort` key at all (so
-port 10255 is never opened even before any edit). The only key genuinely
-missing from the untouched default is an explicit `readOnlyPort: 0` line -
-adding it is the real, verifiable action this question requires; the
-scoring for `anonymous.enabled` is correlated with that same explicit
-`readOnlyPort` line existing, so credit is not handed out for a config that
-was never touched.
+**Note on this cluster:** this minikube profile's kubeadm-generated
+`/var/lib/kubelet/config.yaml` ships with `authentication.anonymous.enabled:
+false` by default, unlike a typical real-world/exam cluster where it defaults
+to enabled. `setup.sh` deliberately flips it to `true` on `cks-dojo-m02`
+before the exam starts, so this question presents the same genuine
+hardening task a candidate would face on a real cluster.
 
 ---

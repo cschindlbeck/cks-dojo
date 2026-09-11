@@ -32,6 +32,39 @@ done
 "${KCTL[@]}" -n rbac-lab create configmap app-config --from-literal=env=staging --dry-run=client -o yaml | "${KCTL[@]}" apply -f -
 "${KCTL[@]}" -n rbac-lab create deployment sample-app --image=nginx:1.25-alpine --dry-run=client -o yaml | "${KCTL[@]}" apply -f -
 
+# --- Question 4: kubelet-m02 anonymous auth intentionally misconfigured ---
+# This minikube profile's kubeadm-generated kubelet config ships with
+# authentication.anonymous.enabled: false out of the box, unlike a typical
+# real-world/exam cluster where it defaults to enabled. Deliberately flip it
+# to true on the worker node so the candidate has genuine hardening work to
+# do. Idempotent: only edits + restarts kubelet if not already misconfigured
+# this way.
+WORKER_NODE="${MINIKUBE_PROFILE}-m02"
+anon_enabled="false"
+if minikube ssh -p "$MINIKUBE_PROFILE" -n "$WORKER_NODE" -- \
+	"sudo grep -A1 'anonymous:' /var/lib/kubelet/config.yaml" 2>/dev/null | grep -q "enabled: true"; then
+	anon_enabled="true"
+fi
+if [ "$anon_enabled" != "true" ]; then
+	echo "  Question 4: enabling kubelet anonymous auth on $WORKER_NODE (intentional misconfiguration)..."
+	minikube ssh -p "$MINIKUBE_PROFILE" -n "$WORKER_NODE" -- \
+		"sudo sed -i '/anonymous:/{n;s/enabled: false/enabled: true/}' /var/lib/kubelet/config.yaml"
+	minikube ssh -p "$MINIKUBE_PROFILE" -n "$WORKER_NODE" -- "sudo systemctl restart kubelet"
+	kubelet_status=""
+	for i in $(seq 1 15); do
+		kubelet_status=$(minikube ssh -p "$MINIKUBE_PROFILE" -n "$WORKER_NODE" -- "systemctl is-active kubelet" 2>/dev/null | tr -d '\r') || true
+		if [ "$kubelet_status" = "active" ]; then
+			break
+		fi
+		sleep 2
+	done
+	if [ "$kubelet_status" != "active" ]; then
+		echo "  WARNING: kubelet on $WORKER_NODE did not become active after restart" >&2
+	fi
+else
+	echo "  Question 4: kubelet anonymous auth already enabled on $WORKER_NODE, skipping."
+fi
+
 # === END QUESTION SEED RESOURCES ===
 
 echo "Setup complete."
