@@ -81,3 +81,25 @@ RoleBinding, saved to `./exam/course/3/rbac.yaml`, so that `viewer-bot` can
 nothing else - it must not be able to create pods, or read secrets.
 
 ---
+
+## Question 4 | Kubelet Hardening | 8 points
+
+|                     |                                              |
+| ------------------- | -------------------------------------------- |
+| **Points**          | 8                                            |
+| **CKS Domain**      | System Hardening                             |
+| **CKS Weight**      | 15%                                          |
+| **Namespace**       | -                                             |
+| **File to create**  | `./exam/course/4/kubelet-config.yaml`        |
+
+### Task
+
+On the worker node `cks-dojo-m02` (`minikube ssh -p cks-dojo -n cks-dojo-m02`),
+edit `/var/lib/kubelet/config.yaml` so that:
+- `authentication.anonymous.enabled` is `false`.
+- `readOnlyPort` is `0`.
+
+Restart kubelet for the change to take effect, then save a copy of the edited
+config to `./exam/course/4/kubelet-config.yaml`.
+
+---

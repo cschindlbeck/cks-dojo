@@ -164,4 +164,60 @@ score_q3() {
 	echo "  Question 3 score: $score / 8"
 }
 
+score_q4() {
+	print_header "Question 4 | Kubelet Hardening (8 points)"
+	local score=0
+	local node="${MINIKUBE_PROFILE}-m02"
+
+	local local_copy="$LOCAL_EXAM_DIR/4/kubelet-config.yaml"
+	check_criterion "Local copy of kubelet config saved" \
+		"$([ -f "$local_copy" ] && echo true || echo false)" && ((score += 1))
+
+	# NOTE: on this cluster's kubeadm-generated kubelet config,
+	# authentication.anonymous.enabled is ALREADY false and readOnlyPort is
+	# ALREADY absent (i.e. disabled) by default, before any candidate action.
+	# So neither "anonymous.enabled is false" nor "anonymous API access is
+	# rejected" can be trusted as standalone signals - both would score points
+	# on a completely untouched node. readOnlyPort: 0 is the one key genuinely
+	# absent from the default file, so its explicit presence is used below as
+	# corroborating evidence that the file was actually edited, and the
+	# anonymous-related criteria are only credited alongside it.
+	local readonly_disabled="false"
+	minikube ssh -p "$MINIKUBE_PROFILE" -n "$node" -- "sudo grep 'readOnlyPort' /var/lib/kubelet/config.yaml" 2>/dev/null |
+		grep -q ": 0" && readonly_disabled="true"
+	check_criterion "readOnlyPort is 0 in kubelet config" "$readonly_disabled" && ((score += 2))
+
+	local anon_disabled="false"
+	minikube ssh -p "$MINIKUBE_PROFILE" -n "$node" -- "sudo grep -A2 'anonymous:' /var/lib/kubelet/config.yaml" 2>/dev/null |
+		grep -q "enabled: false" && anon_disabled="true"
+	if check_criterion "anonymous.enabled is false in kubelet config" "$anon_disabled" && [ "$readonly_disabled" = "true" ]; then
+		((score += 2))
+	fi
+
+	local kubelet_active="false"
+	[ "$(minikube ssh -p "$MINIKUBE_PROFILE" -n "$node" -- "systemctl is-active kubelet" 2>/dev/null | tr -d '\r')" = "active" ] && kubelet_active="true"
+	check_criterion "kubelet is still active after the change" "$kubelet_active" && ((score += 1))
+
+	local node_ip
+	node_ip=$(minikube ssh -p "$MINIKUBE_PROFILE" -n "$node" -- "hostname -i" 2>/dev/null | tr -d '\r')
+	local anon_rejected="false"
+	if [ -n "$node_ip" ]; then
+		# curl from the control-plane node, not the host: node-to-node traffic inside
+		# minikube's network is reliable regardless of host OS/driver.
+		local http_code
+		http_code=$(minikube ssh -p "$MINIKUBE_PROFILE" -n "$MINIKUBE_PROFILE" -- \
+			"curl -sk -o /dev/null -w '%{http_code}' https://${node_ip}:10250/pods --max-time 5" 2>/dev/null | tr -d '\r')
+		{ [ "$http_code" = "401" ] || [ "$http_code" = "403" ]; } && anon_rejected="true"
+	fi
+	# Also only credited alongside readonly_disabled - see note above: this
+	# endpoint already rejects anonymous requests by default on this cluster,
+	# so on its own it is not evidence of any candidate action.
+	if check_criterion "Anonymous kubelet API access is rejected" "$anon_rejected" && [ "$readonly_disabled" = "true" ]; then
+		((score += 2))
+	fi
+
+	Q4_SCORE=$score
+	echo "  Question 4 score: $score / 8"
+}
+
 # === END SCORING FUNCTIONS ===

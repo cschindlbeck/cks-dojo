@@ -156,3 +156,36 @@ built-in `view` ClusterRole, which would also grant access to secrets-adjacent
 and other-namespace resources.
 
 ---
+
+## Question 4 | Kubelet Hardening
+
+**Solution:**
+
+```bash
+minikube ssh -p cks-dojo -n cks-dojo-m02 -- sudo cat /var/lib/kubelet/config.yaml
+```
+
+Edit `authentication.anonymous.enabled` to `false` and `readOnlyPort` to `0`
+(both keys already exist in the kubeadm-generated config), then:
+
+```bash
+minikube ssh -p cks-dojo -n cks-dojo-m02 -- sudo systemctl restart kubelet
+minikube ssh -p cks-dojo -n cks-dojo-m02 -- sudo cat /var/lib/kubelet/config.yaml > ./exam/course/4/kubelet-config.yaml
+```
+
+**Explanation:** anonymous kubelet API access and the deprecated read-only port
+(10255, unauthenticated) are common CIS benchmark findings; disabling both
+forces every kubelet API caller through authenticated/authorized requests on
+the secure port (10250).
+
+**Note on this cluster:** on this minikube-provisioned worker, the
+kubeadm-generated `/var/lib/kubelet/config.yaml` already ships with
+`authentication.anonymous.enabled: false` and no `readOnlyPort` key at all (so
+port 10255 is never opened even before any edit). The only key genuinely
+missing from the untouched default is an explicit `readOnlyPort: 0` line -
+adding it is the real, verifiable action this question requires; the
+scoring for `anonymous.enabled` is correlated with that same explicit
+`readOnlyPort` line existing, so credit is not handed out for a config that
+was never touched.
+
+---
