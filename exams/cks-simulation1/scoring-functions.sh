@@ -73,7 +73,12 @@ score_q2() {
 		2>/dev/null; then
 		allowed="true"
 	fi
-	check_criterion "frontend pods can reach backend-svc:80" "$allowed" && ((score += 3))
+	# Only credit-worthy when a default-deny policy is actually in effect - otherwise
+	# a candidate with NO NetworkPolicy at all would get these points for Calico's
+	# default-allow behavior, which is a false positive, not evidence of the solution.
+	if check_criterion "frontend pods can reach backend-svc:80" "$allowed" && [ "$has_default_deny" = "true" ]; then
+		((score += 3))
+	fi
 
 	local blocked="true"
 	if "${KCTL[@]}" -n "$ns" run netpol-test-blocked --rm -i --restart=Never --image=busybox:1.36 \
