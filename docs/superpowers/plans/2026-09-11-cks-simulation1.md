@@ -1904,7 +1904,7 @@ do not drop it when writing this file.
 
 ```markdown
 <p align="center">
-  <img src="cks-dojo-logo.png" alt="cks-dojo logo" width="400">
+  <img src="cks-dojo-logo.png" alt="cks-dojo logo" width="800">
 </p>
 
 # cks-dojo
