@@ -12,4 +12,45 @@ LOCAL_EXAM_DIR="$REPO_ROOT/exam/course"
 
 # === SCORING FUNCTIONS (one score_qN per question, appended below) ===
 
+score_q1() {
+	print_header "Question 1 | Audit Logging (8 points)"
+	local score=0
+
+	local local_policy="$LOCAL_EXAM_DIR/1/audit-policy.yaml"
+	check_criterion "Local audit-policy.yaml exists" \
+		"$([ -f "$local_policy" ] && echo true || echo false)" && ((score += 1))
+
+	local node_policy_exists
+	node_policy_exists=$(minikube ssh -p "$MINIKUBE_PROFILE" -n "$MINIKUBE_PROFILE" -- \
+		"sudo test -f /etc/kubernetes/audit-policy.yaml && echo true || echo false" 2>/dev/null | tr -d '\r')
+	check_criterion "Audit policy present on the control-plane node" \
+		"${node_policy_exists:-false}" && ((score += 2))
+
+	local apiserver_args
+	apiserver_args=$(minikube ssh -p "$MINIKUBE_PROFILE" -n "$MINIKUBE_PROFILE" -- \
+		"ps aux | grep kube-apiserver | grep -v grep" 2>/dev/null)
+
+	local has_policy_flag="false"
+	echo "$apiserver_args" | grep -q -- "--audit-policy-file=/etc/kubernetes/audit-policy.yaml" && has_policy_flag="true"
+	check_criterion "kube-apiserver started with --audit-policy-file" "$has_policy_flag" && ((score += 2))
+
+	local has_log_flag="false"
+	echo "$apiserver_args" | grep -q -- "--audit-log-path=" && has_log_flag="true"
+	check_criterion "kube-apiserver started with --audit-log-path" "$has_log_flag" && ((score += 1))
+
+	local log_has_entries="false"
+	local log_path
+	log_path=$(echo "$apiserver_args" | grep -oE -- '--audit-log-path=[^ ]+' | cut -d= -f2)
+	if [ -n "$log_path" ]; then
+		local nonempty
+		nonempty=$(minikube ssh -p "$MINIKUBE_PROFILE" -n "$MINIKUBE_PROFILE" -- \
+			"sudo test -s $log_path && echo true || echo false" 2>/dev/null | tr -d '\r')
+		[ "$nonempty" = "true" ] && log_has_entries="true"
+	fi
+	check_criterion "Audit log file has entries" "$log_has_entries" && ((score += 2))
+
+	Q1_SCORE=$score
+	echo "  Question 1 score: $score / 8"
+}
+
 # === END SCORING FUNCTIONS ===
