@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Target cluster: multi-node minikube (2 nodes) with Calico CNI, on a dedicated profile named `cks-dojo`. Never touch any other minikube profile.
-- No Python/uv dependency. No CLI wrapper, no web UI, no timer automation in this v1.
+- No Python/uv dependency. No web UI, no timer automation in this v1. (Amended after Task 14: a thin root-level bash dispatcher script - not a full CLI application - is in scope; see Task 15.)
 - AppArmor questions are excluded. seccomp is used instead for all pod/node hardening questions, since it works identically across all supported hosts.
 - 11 questions total, 92 points total, passing threshold 66% (61 points).
 - Namespaces used across the exam: `net-hardening`, `rbac-lab`, `workload-security`, `psa-lab`, `supply-chain`, `monitoring`.
@@ -1976,4 +1976,129 @@ Expected: `TOTAL: 92 / 92 -- PASS (threshold: 61)`.
 ```bash
 git add README.md
 git commit -m "Add cks-dojo README; cks-simulation1 fully validated end to end"
+```
+
+---
+
+## Task 15: Root-level exam dispatcher script
+
+Added after Task 14, at the user's request: today running an exam means
+`cd exams/cks-simulation1 && ./setup.sh` / `./run-scoring.sh`. This task adds
+a thin bash dispatcher at the repo root so a user can run
+`./cks-dojo.sh <exam-number> setup|score` from anywhere in the repo, without
+knowing the `exams/cks-simulationN` directory convention. This is a forwarding
+script only - it contains no exam logic of its own, so it does not conflict
+with the "no CLI wrapper" global constraint's intent (a real application with
+its own state/UX), just a convenience alias.
+
+**Files:**
+- Create: `cks-dojo.sh` (repo root)
+- Modify: `README.md` (Quick start section)
+
+**Interfaces:**
+- Consumes: `exams/cks-simulation<N>/setup.sh` and `.../run-scoring.sh`, unchanged from every earlier task.
+- Produces: nothing later tasks depend on (this is the final task in the plan).
+
+- [ ] **Step 1: Write cks-dojo.sh**
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+usage() {
+	echo "Usage: $0 <exam-number> <setup|score>"
+	echo
+	echo "Available exams:"
+	local found=0
+	for dir in "$REPO_ROOT"/exams/cks-simulation*/; do
+		[ -d "$dir" ] || continue
+		found=1
+		name="$(basename "$dir")"
+		num="${name#cks-simulation}"
+		echo "  $num  ($name)"
+	done
+	[ "$found" -eq 0 ] && echo "  (none found under exams/)"
+}
+
+if [ "$#" -lt 2 ]; then
+	usage
+	exit 1
+fi
+
+NUM="$1"
+ACTION="$2"
+EXAM_DIR="$REPO_ROOT/exams/cks-simulation${NUM}"
+
+if [ ! -d "$EXAM_DIR" ]; then
+	echo "Error: no exam found for number '$NUM' (expected $EXAM_DIR)" >&2
+	usage
+	exit 1
+fi
+
+case "$ACTION" in
+setup)
+	exec "$EXAM_DIR/setup.sh"
+	;;
+score)
+	exec "$EXAM_DIR/run-scoring.sh"
+	;;
+*)
+	echo "Error: unknown action '$ACTION' (expected 'setup' or 'score')" >&2
+	usage
+	exit 1
+	;;
+esac
+```
+
+- [ ] **Step 2: Make it executable**
+
+Run: `chmod +x cks-dojo.sh`
+
+- [ ] **Step 3: Update README.md's Quick start section**
+
+Replace the existing Quick start section:
+
+```markdown
+## Quick start
+
+1. Read [PREREQUISITES.md](PREREQUISITES.md) and start the cluster.
+2. `cd exams/cks-simulation1 && ./setup.sh`
+3. Solve each question in `./exam/course/<question-number>/` (see `questions.md`).
+4. `./run-scoring.sh`
+5. Stuck? Check `solutions.md`.
+```
+
+with:
+
+```markdown
+## Quick start
+
+1. Read [PREREQUISITES.md](PREREQUISITES.md) and start the cluster.
+2. `./cks-dojo.sh 1 setup`
+3. Solve each question in `exams/cks-simulation1/exam/course/<question-number>/`
+   (see `exams/cks-simulation1/questions.md`). Note: `setup.sh`/`run-scoring.sh`
+   resolve `exam/course/` relative to the exam directory, so solve questions
+   from inside `exams/cks-simulation1/`, or run `./cks-dojo.sh 1 score` from
+   the repo root once you're done - both work.
+4. `./cks-dojo.sh 1 score`
+5. Stuck? Check `exams/cks-simulation1/solutions.md`.
+
+Prefer running things directly? `cd exams/cks-simulation1 && ./setup.sh` /
+`./run-scoring.sh` still works exactly as before - `cks-dojo.sh` is a thin
+convenience wrapper, not a replacement.
+```
+
+- [ ] **Step 4: Verify**
+
+Run `./cks-dojo.sh` (no args): expect usage text listing `1 (cks-simulation1)`, exit code 1.
+Run `./cks-dojo.sh 1 score`: expect the same `run-scoring.sh` output as running it directly from `exams/cks-simulation1/` (should show the exam's current fully-solved state from Task 14, `TOTAL: 92 / 92 -- PASS`).
+Run `./cks-dojo.sh 99 score`: expect a clear "no exam found" error, exit code 1, no crash.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add cks-dojo.sh README.md
+git commit -m "Add root-level cks-dojo.sh dispatcher script"
 ```
