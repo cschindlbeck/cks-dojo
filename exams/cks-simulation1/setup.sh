@@ -27,6 +27,11 @@ done
 "${KCTL[@]}" -n net-hardening rollout status deployment/backend --timeout=60s
 "${KCTL[@]}" -n net-hardening rollout status deployment/frontend --timeout=60s
 
+# --- Question 3: rbac-lab seed resources ---
+"${KCTL[@]}" -n rbac-lab create serviceaccount viewer-bot --dry-run=client -o yaml | "${KCTL[@]}" apply -f -
+"${KCTL[@]}" -n rbac-lab create configmap app-config --from-literal=env=staging --dry-run=client -o yaml | "${KCTL[@]}" apply -f -
+"${KCTL[@]}" -n rbac-lab create deployment sample-app --image=nginx:1.25-alpine --dry-run=client -o yaml | "${KCTL[@]}" apply -f -
+
 # === END QUESTION SEED RESOURCES ===
 
 echo "Setup complete."

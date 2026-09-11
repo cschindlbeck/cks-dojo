@@ -100,4 +100,50 @@ score_q2() {
 	echo "  Question 2 score: $score / 10"
 }
 
+score_q3() {
+	print_header "Question 3 | RBAC Least Privilege (8 points)"
+	local score=0
+	local ns="rbac-lab"
+	local sa="system:serviceaccount:${ns}:viewer-bot"
+
+	local role_exists="false"
+	"${KCTL[@]}" -n "$ns" get role -o name 2>/dev/null | grep -q . && role_exists="true"
+	check_criterion "A Role exists in $ns" "$role_exists" && ((score += 1))
+
+	local binding_exists="false"
+	"${KCTL[@]}" -n "$ns" get rolebinding -o name 2>/dev/null | grep -q . && binding_exists="true"
+	check_criterion "A RoleBinding exists in $ns" "$binding_exists" && ((score += 1))
+
+	local can_get_pods="false"
+	[ "$("${KCTL[@]}" auth can-i get pods -n "$ns" --as="$sa" 2>/dev/null)" = "yes" ] && can_get_pods="true"
+	check_criterion "viewer-bot can get pods" "$can_get_pods" && ((score += 2))
+
+	local can_get_cm="false"
+	[ "$("${KCTL[@]}" auth can-i get configmaps -n "$ns" --as="$sa" 2>/dev/null)" = "yes" ] && can_get_cm="true"
+	check_criterion "viewer-bot can get configmaps" "$can_get_cm" && ((score += 2))
+
+	# "cannot create pods" / "cannot get secrets" are true by default for ANY
+	# ServiceAccount with no Role/RoleBinding at all - crediting them
+	# unconditionally would award points in a genuinely unsolved state. Only
+	# credit them when a Role and RoleBinding actually exist, so they reward
+	# the candidate scoping their grant narrowly rather than doing nothing.
+	local has_rbac="false"
+	[ "$role_exists" = "true" ] && [ "$binding_exists" = "true" ] && has_rbac="true"
+
+	local cannot_create_pods="false"
+	[ "$("${KCTL[@]}" auth can-i create pods -n "$ns" --as="$sa" 2>/dev/null)" = "no" ] && cannot_create_pods="true"
+	if check_criterion "viewer-bot cannot create pods (least privilege)" "$cannot_create_pods" && [ "$has_rbac" = "true" ]; then
+		((score += 1))
+	fi
+
+	local cannot_get_secrets="false"
+	[ "$("${KCTL[@]}" auth can-i get secrets -n "$ns" --as="$sa" 2>/dev/null)" = "no" ] && cannot_get_secrets="true"
+	if check_criterion "viewer-bot cannot get secrets (least privilege)" "$cannot_get_secrets" && [ "$has_rbac" = "true" ]; then
+		((score += 1))
+	fi
+
+	Q3_SCORE=$score
+	echo "  Question 3 score: $score / 8"
+}
+
 # === END SCORING FUNCTIONS ===

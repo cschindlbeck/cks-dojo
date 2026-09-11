@@ -105,3 +105,54 @@ default. The second policy then narrowly re-opens port 80 from `app=frontend`
 to `app=backend` only. Calico enforces both.
 
 ---
+
+## Question 3 | RBAC Least Privilege
+
+**Solution:**
+
+`./exam/course/3/rbac.yaml`:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: viewer-role
+  namespace: rbac-lab
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "configmaps"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: viewer-binding
+  namespace: rbac-lab
+subjects:
+  - kind: ServiceAccount
+    name: viewer-bot
+    namespace: rbac-lab
+roleRef:
+  kind: Role
+  name: viewer-role
+  apiGroup: rbac.authorization.k8s.io
+```
+
+```bash
+kubectl --context cks-dojo apply -f ./exam/course/3/rbac.yaml
+```
+
+Verify:
+
+```bash
+kubectl --context cks-dojo auth can-i get pods -n rbac-lab --as=system:serviceaccount:rbac-lab:viewer-bot        # yes
+kubectl --context cks-dojo auth can-i create pods -n rbac-lab --as=system:serviceaccount:rbac-lab:viewer-bot     # no
+kubectl --context cks-dojo auth can-i get secrets -n rbac-lab --as=system:serviceaccount:rbac-lab:viewer-bot     # no
+```
+
+**Explanation:** least privilege means listing only the exact resources and
+verbs needed - `pods`/`configmaps` with read-only verbs - rather than a
+built-in `view` ClusterRole, which would also grant access to secrets-adjacent
+and other-namespace resources.
+
+---

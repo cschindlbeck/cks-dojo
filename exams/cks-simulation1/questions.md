@@ -61,3 +61,23 @@ Write NetworkPolicies to `./exam/course/2/netpol.yaml` and apply them so that:
 - No other traffic is allowed to `backend`.
 
 ---
+
+## Question 3 | RBAC Least Privilege | 8 points
+
+|                     |                                              |
+| ------------------- | -------------------------------------------- |
+| **Points**          | 8                                            |
+| **CKS Domain**      | Cluster Hardening                            |
+| **CKS Weight**      | 15%                                          |
+| **Namespace**       | `rbac-lab`                                   |
+| **Resources**       | Role, RoleBinding                            |
+| **File to create**  | `./exam/course/3/rbac.yaml`                  |
+
+### Task
+
+ServiceAccount `viewer-bot` exists in namespace `rbac-lab`. Create a Role and
+RoleBinding, saved to `./exam/course/3/rbac.yaml`, so that `viewer-bot` can
+`get`, `list`, and `watch` **pods** and **configmaps** in `rbac-lab`, and
+nothing else - it must not be able to create pods, or read secrets.
+
+---
