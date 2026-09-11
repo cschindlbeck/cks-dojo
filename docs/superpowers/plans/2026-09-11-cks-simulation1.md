@@ -1898,7 +1898,15 @@ git commit -m "Add cks-simulation1 question 11: Falco runtime security"
 
 - [ ] **Step 1: Write README.md**
 
+The repo root already has `cks-dojo-logo.png` (the project's primary logo, added
+out of band). Keep the image reference at the top exactly as shown below -
+do not drop it when writing this file.
+
 ```markdown
+<p align="center">
+  <img src="cks-dojo-logo.png" alt="cks-dojo logo" width="400">
+</p>
+
 # cks-dojo
 
 A minimal, local CKS (Certified Kubernetes Security Specialist) exam simulator,

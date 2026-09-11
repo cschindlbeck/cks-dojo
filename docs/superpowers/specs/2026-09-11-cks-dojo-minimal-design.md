@@ -36,7 +36,7 @@ cks-dojo/
 │       ├── scoring-functions.sh      # score_qN() functions, one per question
 │       ├── setup.sh                  # provisions namespaces/resources for this exam (idempotent)
 │       ├── run-scoring.sh            # sources scoring-functions.sh, runs all score_qN, prints total
-│       ├── manifests/setup/          # YAML the setup script applies
+│       ├── manifests/setup/          # YAML/JSON the setup script applies
 │       └── templates/                # starter YAML given to the candidate
 └── exam/course/                      # candidate's working directory (gitignored, mirrors ckad-dojo's exam/course/N/)
 ```
@@ -67,25 +67,25 @@ Questions 2 and 7 are adapted from ckad-dojo's `NetworkPolicy Default Deny` and 
 
 ## Cluster Target
 
-Multi-node minikube with the Calico CNI is the only supported target for v1:
+Multi-node minikube with the Calico CNI is the only supported target for v1, on a dedicated profile named `cks-dojo` so it never touches any other minikube profile a user already has running:
 
 ```
-minikube start --nodes 2 --cni=calico --kubernetes-version=stable
+minikube start -p cks-dojo --nodes 2 --cni=calico --kubernetes-version=stable
 ```
 
 Rationale: minikube uses kubeadm under the hood, so control-plane hardening (kube-apiserver static pod manifest edits via `minikube ssh`), etcd encryption at rest, audit logging, and RBAC all behave the same as on a real kubeadm-based cluster (which is also how the real CKS exam environment is built). The default minikube CNI does not enforce NetworkPolicy, so Calico is required for question 2 to be gradeable.
 
-One-time tool installs required beyond `bash`, `kubectl`, and `minikube`: `trivy`, `kube-bench`, and `helm` (for deploying Falco).
+One-time tool installs required beyond `bash`, `kubectl`, `minikube`, and `helm` (for deploying Falco): `trivy` CLI. `kube-bench` runs as a Kubernetes Job using the official `aquasec/kube-bench` image, no local binary needed.
 
 `PREREQUISITES.md` documents these steps and the AppArmor limitation described above. Other cluster targets (kind, cloud-managed clusters, bare kubeadm) are a known limitation, not solved for in v1.
 
 ## Setup and Scoring Mechanics
 
 - `setup.sh`: idempotent, creates namespaces and seed resources via `kubectl apply`, safe to rerun. Reads namespace list from `exam.conf`, following the ckad-dojo pattern.
-- `scoring-functions.sh`: one `score_qN()` function per question, using ported `check_criterion`/`print_success`/`print_fail` helpers from `scripts/lib/common.sh`. Each function inspects live cluster state (`kubectl get`, `kubectl exec`, file checks under `exam/course/N/`) and prints pass/fail per criterion.
-- `run-scoring.sh`: sources `scoring-functions.sh`, calls each `score_qN` in order, sums points, and prints a final `X / 92 (PASS/FAIL @ 66%)`.
+- `scoring-functions.sh`: one `score_qN()` function per question, using ported `check_criterion`/`print_success`/`print_fail` helpers from `scripts/lib/common.sh`. Each function inspects live cluster state (`kubectl get`, `kubectl exec`, `minikube ssh`, file checks under `exam/course/N/`) and prints pass/fail per criterion, then sets a global `QN_SCORE` variable.
+- `run-scoring.sh`: sources `scoring-functions.sh`, calls each `score_qN` in order, sums `QN_SCORE` values, and prints a final `X / 92 (PASS/FAIL @ 66%)`.
 - No timer automation. `exam.conf` documents the recommended 120-minute duration for self-timing; the candidate manages their own clock.
-- Dependencies: `bash` and `kubectl` for the core flow, plus `trivy`, `kube-bench`, and `helm` for the specific questions that need them.
+- Dependencies: `bash` and `kubectl` for the core flow, plus `trivy` and `helm` for the specific questions that need them.
 
 ## Validation Approach
 
