@@ -9,6 +9,7 @@ any other minikube profile you may already have running.
 - `minikube` (>= 1.30)
 - `helm` (for deploying Falco in question 11)
 - `trivy` CLI (for question 9): `brew install trivy` or see https://aquasecurity.github.io/trivy/
+- `jq` (for question 2's NetworkPolicy scoring): `brew install jq` or see https://jqlang.org/
 
 `kube-bench` (question 6) runs as a Kubernetes Job using the official
 `aquasec/kube-bench` image, no local install needed.
