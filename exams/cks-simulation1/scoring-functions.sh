@@ -53,4 +53,38 @@ score_q1() {
 	echo "  Question 1 score: $score / 8"
 }
 
+score_q2() {
+	print_header "Question 2 | NetworkPolicy Default Deny (10 points)"
+	local score=0
+	local ns="net-hardening"
+
+	local netpol_count
+	netpol_count=$("${KCTL[@]}" -n "$ns" get networkpolicy -o name 2>/dev/null | wc -l | tr -d ' ')
+	check_criterion "At least one NetworkPolicy exists in $ns" \
+		"$([ "$netpol_count" -ge 1 ] && echo true || echo false)" && ((score += 2))
+
+	local has_default_deny="false"
+	"${KCTL[@]}" -n "$ns" get networkpolicy -o json 2>/dev/null | grep -qE '"podSelector":[[:space:]]*\{\}' && has_default_deny="true"
+	check_criterion "A default-deny-all NetworkPolicy is present" "$has_default_deny" && ((score += 2))
+
+	local allowed="false"
+	if "${KCTL[@]}" -n "$ns" run netpol-test-allowed --rm -i --restart=Never --image=busybox:1.36 \
+		--overrides='{"apiVersion":"v1","metadata":{"labels":{"app":"frontend"}},"spec":{"containers":[{"name":"netpol-test-allowed","image":"busybox:1.36","command":["wget","-q","-T","5","-O-","http://backend-svc"]}]}}' \
+		2>/dev/null; then
+		allowed="true"
+	fi
+	check_criterion "frontend pods can reach backend-svc:80" "$allowed" && ((score += 3))
+
+	local blocked="true"
+	if "${KCTL[@]}" -n "$ns" run netpol-test-blocked --rm -i --restart=Never --image=busybox:1.36 \
+		--overrides='{"apiVersion":"v1","metadata":{"labels":{"app":"other"}},"spec":{"containers":[{"name":"netpol-test-blocked","image":"busybox:1.36","command":["wget","-q","-T","5","-O-","http://backend-svc"]}]}}' \
+		2>/dev/null; then
+		blocked="false"
+	fi
+	check_criterion "pods without app=frontend cannot reach backend-svc:80" "$blocked" && ((score += 3))
+
+	Q2_SCORE=$score
+	echo "  Question 2 score: $score / 10"
+}
+
 # === END SCORING FUNCTIONS ===

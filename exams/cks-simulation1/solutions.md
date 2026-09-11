@@ -56,3 +56,52 @@ and letting kubelet reconcile it is the standard way to change its flags -
 there's no Deployment/Service to `kubectl edit`.
 
 ---
+
+## Question 2 | NetworkPolicy Default Deny
+
+**Solution:**
+
+`./exam/course/2/netpol.yaml`:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: net-hardening
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-frontend-to-backend
+  namespace: net-hardening
+spec:
+  podSelector:
+    matchLabels:
+      app: backend
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: frontend
+      ports:
+        - protocol: TCP
+          port: 80
+```
+
+```bash
+kubectl --context cks-dojo apply -f ./exam/course/2/netpol.yaml
+```
+
+**Explanation:** an empty `podSelector: {}` with `policyTypes: [Ingress]` and no
+`ingress` rules matches every pod in the namespace and denies all ingress by
+default. The second policy then narrowly re-opens port 80 from `app=frontend`
+to `app=backend` only. Calico enforces both.
+
+---

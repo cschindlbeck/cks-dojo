@@ -20,6 +20,13 @@ done
 
 # === QUESTION SEED RESOURCES (one block per question, appended below) ===
 
+# --- Question 2: net-hardening seed workloads ---
+"${KCTL[@]}" -n net-hardening create deployment backend --image=nginx:1.25-alpine --dry-run=client -o yaml | "${KCTL[@]}" apply -f -
+"${KCTL[@]}" -n net-hardening expose deployment backend --port=80 --target-port=80 --name=backend-svc --dry-run=client -o yaml | "${KCTL[@]}" apply -f -
+"${KCTL[@]}" -n net-hardening create deployment frontend --image=nginx:1.25-alpine --dry-run=client -o yaml | "${KCTL[@]}" apply -f -
+"${KCTL[@]}" -n net-hardening rollout status deployment/backend --timeout=60s
+"${KCTL[@]}" -n net-hardening rollout status deployment/frontend --timeout=60s
+
 # === END QUESTION SEED RESOURCES ===
 
 echo "Setup complete."

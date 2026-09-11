@@ -36,3 +36,28 @@ The security team wants an audit policy that logs all requests to `secrets` and
 4. Confirm kube-apiserver restarts and the audit log file is being written to.
 
 ---
+
+## Question 2 | NetworkPolicy Default Deny | 10 points
+
+|                     |                                              |
+| ------------------- | -------------------------------------------- |
+| **Points**          | 10                                           |
+| **CKS Domain**      | Cluster Hardening                            |
+| **CKS Weight**      | 15%                                          |
+| **Namespace**       | `net-hardening`                              |
+| **Resources**       | NetworkPolicies                              |
+| **File to create**  | `./exam/course/2/netpol.yaml`                |
+
+### Task
+
+The `net-hardening` namespace has two Deployments: `frontend` (label
+`app=frontend`) and `backend` (label `app=backend`, exposed via Service
+`backend-svc` on port 80).
+
+Write NetworkPolicies to `./exam/course/2/netpol.yaml` and apply them so that:
+- By default, no ingress traffic is allowed to any pod in `net-hardening`.
+- Pods labeled `app=frontend` are allowed to reach pods labeled `app=backend`
+  on TCP port 80.
+- No other traffic is allowed to `backend`.
+
+---
