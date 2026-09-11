@@ -186,3 +186,40 @@ before the exam starts, so this question presents the same genuine
 hardening task a candidate would face on a real cluster.
 
 ---
+
+## Question 5 | seccomp Enforcement
+
+**Solution:**
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: seccomp-demo
+  namespace: workload-security
+spec:
+  securityContext:
+    seccompProfile:
+      type: Localhost
+      localhostProfile: profiles/deny-chmod.json
+  containers:
+    - name: seccomp-demo
+      image: busybox:1.36
+      command: ["sleep", "3600"]
+```
+
+```bash
+kubectl --context cks-dojo apply -f - <<'EOF'
+# (the manifest above)
+EOF
+
+kubectl --context cks-dojo -n workload-security exec seccomp-demo -- chmod 777 /tmp \
+  > ./exam/course/5/seccomp-test.txt 2>&1
+```
+
+**Explanation:** `localhostProfile` is relative to
+`/var/lib/kubelet/seccomp/`, so `profiles/deny-chmod.json` resolves to the file
+installed by `setup.sh`. The profile's default action allows every syscall
+except `chmod`/`fchmod`/`fchmodat`, which return `EPERM`.
+
+---

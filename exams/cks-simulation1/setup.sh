@@ -65,6 +65,13 @@ else
 	echo "  Question 4: kubelet anonymous auth already enabled on $WORKER_NODE, skipping."
 fi
 
+# --- Question 5: seccomp profile installed on every node ---
+SECCOMP_PROFILE="$EXAM_DIR/manifests/setup/deny-chmod.json"
+for node in "$MINIKUBE_PROFILE" "${MINIKUBE_PROFILE}-m02"; do
+	minikube ssh -p "$MINIKUBE_PROFILE" -n "$node" -- "sudo mkdir -p /var/lib/kubelet/seccomp/profiles"
+	minikube cp -p "$MINIKUBE_PROFILE" "$SECCOMP_PROFILE" "${node}:/var/lib/kubelet/seccomp/profiles/deny-chmod.json"
+done
+
 # === END QUESTION SEED RESOURCES ===
 
 echo "Setup complete."

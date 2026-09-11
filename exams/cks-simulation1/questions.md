@@ -103,3 +103,30 @@ Restart kubelet for the change to take effect, then save a copy of the edited
 config to `./exam/course/4/kubelet-config.yaml`.
 
 ---
+
+## Question 5 | seccomp Enforcement | 8 points
+
+|                     |                                              |
+| ------------------- | -------------------------------------------- |
+| **Points**          | 8                                            |
+| **CKS Domain**      | System Hardening                             |
+| **CKS Weight**      | 15%                                          |
+| **Namespace**       | `workload-security`                          |
+| **Resources**       | Pod `seccomp-demo`                           |
+| **File to create**  | `./exam/course/5/seccomp-test.txt`           |
+
+### Task
+
+A custom seccomp profile that denies `chmod` is already installed on every
+node at `/var/lib/kubelet/seccomp/profiles/deny-chmod.json`.
+
+Create a Pod named `seccomp-demo` in `workload-security` (image `busybox:1.36`,
+command `sleep 3600`) that uses this profile via
+`securityContext.seccompProfile` (`type: Localhost`,
+`localhostProfile: profiles/deny-chmod.json`).
+
+Confirm the profile is enforced by running `chmod 777 /tmp` inside the
+container and observing it fail, then save that command's output to
+`./exam/course/5/seccomp-test.txt`.
+
+---
