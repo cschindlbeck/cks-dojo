@@ -64,7 +64,15 @@ score_q2() {
 		"$([ "$netpol_count" -ge 1 ] && echo true || echo false)" && ((score += 2))
 
 	local has_default_deny="false"
-	"${KCTL[@]}" -n "$ns" get networkpolicy -o json 2>/dev/null | grep -qE '"podSelector":[[:space:]]*\{\}' && has_default_deny="true"
+	# Correlated check on the SAME policy object: an empty podSelector only denies
+	# all ingress if that policy's policyTypes actually includes "Ingress" - a
+	# policy with podSelector:{} and policyTypes:[Egress] denies nothing on ingress
+	# and must not be credited as default-deny.
+	if "${KCTL[@]}" -n "$ns" get networkpolicy -o json 2>/dev/null | \
+		jq -e '.items[] | select(.spec.podSelector == {} and (.spec.policyTypes // [] | any(. == "Ingress")))' \
+		>/dev/null 2>&1; then
+		has_default_deny="true"
+	fi
 	check_criterion "A default-deny-all NetworkPolicy is present" "$has_default_deny" && ((score += 2))
 
 	local allowed="false"
