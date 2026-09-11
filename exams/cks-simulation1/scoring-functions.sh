@@ -108,27 +108,45 @@ score_q3() {
 
 	local role_exists="false"
 	"${KCTL[@]}" -n "$ns" get role -o name 2>/dev/null | grep -q . && role_exists="true"
-	check_criterion "A Role exists in $ns" "$role_exists" && ((score += 1))
 
 	local binding_exists="false"
 	"${KCTL[@]}" -n "$ns" get rolebinding -o name 2>/dev/null | grep -q . && binding_exists="true"
-	check_criterion "A RoleBinding exists in $ns" "$binding_exists" && ((score += 1))
 
 	local can_get_pods="false"
 	[ "$("${KCTL[@]}" auth can-i get pods -n "$ns" --as="$sa" 2>/dev/null)" = "yes" ] && can_get_pods="true"
-	check_criterion "viewer-bot can get pods" "$can_get_pods" && ((score += 2))
 
 	local can_get_cm="false"
 	[ "$("${KCTL[@]}" auth can-i get configmaps -n "$ns" --as="$sa" 2>/dev/null)" = "yes" ] && can_get_cm="true"
+
+	# Some Role/RoleBinding existing ANYWHERE in the namespace is not evidence
+	# of a real solution by itself - a candidate could create a totally
+	# unrelated Role (e.g. granting access to a different resource) and an
+	# unrelated RoleBinding (e.g. binding a different subject), which would
+	# satisfy "exists" checks without ever granting viewer-bot anything. Tie
+	# credit to viewer-bot actually having demonstrated, relevant access
+	# (get on pods and/or configmaps), not mere object existence.
+	local has_real_access="false"
+	{ [ "$can_get_pods" = "true" ] || [ "$can_get_cm" = "true" ]; } && has_real_access="true"
+
+	local role_credit="false"
+	[ "$role_exists" = "true" ] && [ "$has_real_access" = "true" ] && role_credit="true"
+	check_criterion "A Role exists in $ns and grants viewer-bot real access" "$role_credit" && ((score += 1))
+
+	local binding_credit="false"
+	[ "$binding_exists" = "true" ] && [ "$has_real_access" = "true" ] && binding_credit="true"
+	check_criterion "A RoleBinding exists in $ns and grants viewer-bot real access" "$binding_credit" && ((score += 1))
+
+	check_criterion "viewer-bot can get pods" "$can_get_pods" && ((score += 2))
+
 	check_criterion "viewer-bot can get configmaps" "$can_get_cm" && ((score += 2))
 
 	# "cannot create pods" / "cannot get secrets" are true by default for ANY
-	# ServiceAccount with no Role/RoleBinding at all - crediting them
-	# unconditionally would award points in a genuinely unsolved state. Only
-	# credit them when a Role and RoleBinding actually exist, so they reward
-	# the candidate scoping their grant narrowly rather than doing nothing.
-	local has_rbac="false"
-	[ "$role_exists" = "true" ] && [ "$binding_exists" = "true" ] && has_rbac="true"
+	# ServiceAccount with no relevant Role/RoleBinding at all - crediting them
+	# unconditionally would award points in a genuinely unsolved state (or in
+	# the unrelated-RBAC-objects case above). Only credit them when viewer-bot
+	# actually has real, relevant access, so they reward the candidate scoping
+	# their grant narrowly rather than doing nothing (or something irrelevant).
+	local has_rbac="$has_real_access"
 
 	local cannot_create_pods="false"
 	[ "$("${KCTL[@]}" auth can-i create pods -n "$ns" --as="$sa" 2>/dev/null)" = "no" ] && cannot_create_pods="true"
