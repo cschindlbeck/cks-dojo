@@ -215,4 +215,44 @@ score_q4() {
 	echo "  Question 4 score: $score / 8"
 }
 
+score_q5() {
+	print_header "Question 5 | seccomp Enforcement (8 points)"
+	local score=0
+	local ns="workload-security"
+	local pod="seccomp-demo"
+
+	local seccomp_type
+	seccomp_type=$("${KCTL[@]}" -n "$ns" get pod "$pod" -o jsonpath='{.spec.securityContext.seccompProfile.type}' 2>/dev/null)
+	check_criterion "Pod uses a Localhost seccompProfile" \
+		"$([ "$seccomp_type" = "Localhost" ] && echo true || echo false)" && ((score += 2))
+
+	local profile_path
+	profile_path=$("${KCTL[@]}" -n "$ns" get pod "$pod" -o jsonpath='{.spec.securityContext.seccompProfile.localhostProfile}' 2>/dev/null)
+	check_criterion "localhostProfile points at deny-chmod.json" \
+		"$(echo "$profile_path" | grep -q "deny-chmod.json" && echo true || echo false)" && ((score += 2))
+
+	local pod_running="false"
+	[ "$("${KCTL[@]}" -n "$ns" get pod "$pod" -o jsonpath='{.status.phase}' 2>/dev/null)" = "Running" ] && pod_running="true"
+	check_criterion "Pod is Running" "$pod_running" && ((score += 1))
+
+	# Captured via command substitution rather than piped directly into grep:
+	# run-scoring.sh runs with `set -o pipefail`, and kubectl exec's own exit
+	# code mirrors the remote command's exit code (1 when chmod is blocked).
+	# Piping straight into grep would make that non-zero exit code win the
+	# pipefail race even when grep matches, silently scoring the genuinely
+	# solved state as 0 - capturing output first avoids the pipe entirely.
+	local chmod_output
+	chmod_output=$("${KCTL[@]}" -n "$ns" exec "$pod" -- chmod 777 /tmp 2>&1)
+	local chmod_blocked="false"
+	echo "$chmod_output" | grep -qi "not permitted" && chmod_blocked="true"
+	check_criterion "chmod is blocked inside the pod by the profile" "$chmod_blocked" && ((score += 2))
+
+	local evidence_saved="false"
+	[ -s "$LOCAL_EXAM_DIR/5/seccomp-test.txt" ] && evidence_saved="true"
+	check_criterion "Evidence saved to exam/course/5/seccomp-test.txt" "$evidence_saved" && ((score += 1))
+
+	Q5_SCORE=$score
+	echo "  Question 5 score: $score / 8"
+}
+
 # === END SCORING FUNCTIONS ===
