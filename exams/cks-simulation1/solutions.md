@@ -295,3 +295,21 @@ loop, unlike images that need to write to disk or bind low ports at startup.
 
 ---
 
+## Question 8 | Pod Security Admission
+
+**Solution:**
+
+```bash
+kubectl --context cks-dojo label namespace psa-lab pod-security.kubernetes.io/enforce=restricted --overwrite
+
+kubectl --context cks-dojo apply -f ./templates/bad-pod.yaml
+# expect: error validating ... violates PodSecurity "restricted:latest": ...
+```
+
+**Explanation:** Pod Security Admission is a built-in admission controller
+(no extra installation) that enforces the Pod Security Standards per
+namespace via labels. `restricted` forbids privileged containers, host
+namespaces, and requires a hardened SecurityContext similar to Question 7's.
+
+---
+

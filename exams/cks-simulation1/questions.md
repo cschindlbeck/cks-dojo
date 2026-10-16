@@ -176,3 +176,22 @@ Save the manifest to `./exam/course/7/hardened-app.yaml`.
 
 ---
 
+## Question 8 | Pod Security Admission | 8 points
+
+|                     |                                              |
+| ------------------- | -------------------------------------------- |
+| **Points**          | 8                                            |
+| **CKS Domain**      | Minimize Microservice Vulnerabilities        |
+| **CKS Weight**      | 20%                                          |
+| **Namespace**       | `psa-lab`                                    |
+| **Resources**       | Namespace label                              |
+| **File to create**  | -                                            |
+
+### Task
+
+Label the `psa-lab` namespace to enforce the `restricted` Pod Security
+Standard. Confirm `./templates/bad-pod.yaml` (a privileged Pod) is rejected
+once the label is applied.
+
+---
+

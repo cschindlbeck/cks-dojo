@@ -314,4 +314,34 @@ score_q7() {
 	echo "  Question 7 score: $score / 10"
 }
 
+score_q8() {
+	print_header "Question 8 | Pod Security Admission (8 points)"
+	local score=0
+	local ns="psa-lab"
+
+	local enforce_label
+	enforce_label=$("${KCTL[@]}" get ns "$ns" -o jsonpath='{.metadata.labels.pod-security\.kubernetes\.io/enforce}' 2>/dev/null)
+	check_criterion "Namespace labeled pod-security.kubernetes.io/enforce=restricted" \
+		"$([ "$enforce_label" = "restricted" ] && echo true || echo false)" && ((score += 3))
+
+	# Output captured before grepping (see score_q5): a rejected apply exits
+	# non-zero, which would win the pipefail race and hide the match.
+	local bad_pod_output
+	bad_pod_output=$("${KCTL[@]}" apply -f "$EXAM_DIR/templates/bad-pod.yaml" 2>&1)
+	local bad_pod_rejected="false"
+	echo "$bad_pod_output" | grep -qi "violat" && bad_pod_rejected="true"
+	check_criterion "A privileged pod is rejected by admission control" "$bad_pod_rejected" && ((score += 3))
+	"${KCTL[@]}" -n "$ns" delete pod privileged-test --ignore-not-found >/dev/null 2>&1
+
+	local good_pod_allowed="false"
+	"${KCTL[@]}" -n "$ns" run compliant-test --image=busybox:1.36 --restart=Never \
+		--overrides='{"apiVersion":"v1","spec":{"securityContext":{"runAsNonRoot":true,"runAsUser":1000,"seccompProfile":{"type":"RuntimeDefault"}},"containers":[{"name":"compliant-test","image":"busybox:1.36","command":["sleep","30"],"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}}]}}' \
+		>/dev/null 2>&1 && good_pod_allowed="true"
+	check_criterion "A compliant pod is still allowed" "$good_pod_allowed" && ((score += 2))
+	"${KCTL[@]}" -n "$ns" delete pod compliant-test --ignore-not-found >/dev/null 2>&1
+
+	Q8_SCORE=$score
+	echo "  Question 8 score: $score / 8"
+}
+
 # === END SCORING FUNCTIONS ===
