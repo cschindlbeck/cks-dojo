@@ -313,3 +313,45 @@ namespaces, and requires a hardened SecurityContext similar to Question 7's.
 
 ---
 
+## Question 9 | Image Vulnerability Scanning
+
+**Solution:**
+
+```bash
+trivy image node:14 --severity CRITICAL --format json -o ./exam/course/9/trivy-report.json
+```
+
+`./exam/course/9/deployment.yaml`:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-supply-chain
+  namespace: supply-chain
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web-supply-chain
+  template:
+    metadata:
+      labels:
+        app: web-supply-chain
+    spec:
+      containers:
+        - name: web-supply-chain
+          image: node:20-alpine
+          command: ["sleep", "3600"]
+```
+
+```bash
+kubectl --context cks-dojo apply -f ./exam/course/9/deployment.yaml
+```
+
+**Explanation:** `node:14` is end-of-life and carries known CRITICAL CVEs;
+trivy's report is the evidence that scanning happened, and the deployed image
+tag is the evidence that the finding was acted on rather than ignored.
+
+---
+

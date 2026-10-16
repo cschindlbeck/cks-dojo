@@ -344,4 +344,36 @@ score_q8() {
 	echo "  Question 8 score: $score / 8"
 }
 
+score_q9() {
+	print_header "Question 9 | Image Vulnerability Scanning (10 points)"
+	local score=0
+	local ns="supply-chain"
+
+	# Require a real trivy JSON report for node:14 with at least one CRITICAL
+	# vulnerability, not just any non-empty file containing the word CRITICAL.
+	local report="$LOCAL_EXAM_DIR/9/trivy-report.json"
+	local report_valid="false"
+	[ -s "$report" ] && jq -e '.ArtifactName == "node:14" and ([.Results[]?.Vulnerabilities[]? | select(.Severity == "CRITICAL")] | length > 0)' \
+		"$report" >/dev/null 2>&1 && report_valid="true"
+	check_criterion "trivy report for node:14 saved and shows CRITICAL findings" "$report_valid" && ((score += 4))
+
+	local deploy_image
+	deploy_image=$("${KCTL[@]}" -n "$ns" get deploy web-supply-chain -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null)
+	local uses_vulnerable="false"
+	echo "$deploy_image" | grep -qE "^node:14($|-)" && uses_vulnerable="true"
+	check_criterion "Deployment does NOT use the vulnerable node:14 image" \
+		"$([ -n "$deploy_image" ] && [ "$uses_vulnerable" = "false" ] && echo true || echo false)" && ((score += 3))
+
+	local pod_running="false"
+	[ "$("${KCTL[@]}" -n "$ns" get pods -l app=web-supply-chain -o jsonpath='{.items[0].status.phase}' 2>/dev/null)" = "Running" ] && pod_running="true"
+	check_criterion "web-supply-chain pod is Running" "$pod_running" && ((score += 2))
+
+	local manifest_saved="false"
+	[ -s "$LOCAL_EXAM_DIR/9/deployment.yaml" ] && manifest_saved="true"
+	check_criterion "Deployment manifest saved to exam/course/9/deployment.yaml" "$manifest_saved" && ((score += 1))
+
+	Q9_SCORE=$score
+	echo "  Question 9 score: $score / 10"
+}
+
 # === END SCORING FUNCTIONS ===

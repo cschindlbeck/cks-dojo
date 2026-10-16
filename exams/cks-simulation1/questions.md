@@ -195,3 +195,24 @@ once the label is applied.
 
 ---
 
+## Question 9 | Image Vulnerability Scanning | 10 points
+
+|                     |                                              |
+| ------------------- | -------------------------------------------- |
+| **Points**          | 10                                           |
+| **CKS Domain**      | Supply Chain Security                        |
+| **CKS Weight**      | 20%                                          |
+| **Namespace**       | `supply-chain`                               |
+| **Resources**       | Deployment `web-supply-chain`                |
+| **Files to create** | `./exam/course/9/trivy-report.json`, `./exam/course/9/deployment.yaml` |
+
+### Task
+
+Scan the `node:14` image for CRITICAL vulnerabilities with trivy, saving the
+report to `./exam/course/9/trivy-report.json`. Based on that report, deploy a
+Deployment named `web-supply-chain` in `supply-chain` using a newer, patched
+tag (e.g. `node:20-alpine`) instead - never deploy `node:14`. Save the
+manifest to `./exam/course/9/deployment.yaml`.
+
+---
+
