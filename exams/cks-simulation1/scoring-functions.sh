@@ -376,4 +376,56 @@ score_q9() {
 	echo "  Question 9 score: $score / 10"
 }
 
+score_q10() {
+	print_header "Question 10 | etcd Encryption at Rest (8 points)"
+	local score=0
+
+	local local_copy="$LOCAL_EXAM_DIR/10/encryption-config.yaml"
+	check_criterion "Local copy of encryption-config.yaml saved" \
+		"$([ -f "$local_copy" ] && echo true || echo false)" && ((score += 1))
+
+	local apiserver_args
+	apiserver_args=$(minikube ssh -p "$MINIKUBE_PROFILE" -n "$MINIKUBE_PROFILE" -- \
+		"ps aux | grep kube-apiserver | grep -v grep" 2>/dev/null)
+
+	local flag_present="false"
+	echo "$apiserver_args" | grep -q -- "--encryption-provider-config=" && flag_present="true"
+	check_criterion "kube-apiserver started with --encryption-provider-config" "$flag_present" && ((score += 2))
+
+	# Always write a fresh Secret: an existing one is only re-encrypted when it
+	# is actually rewritten, and an identical `apply` is a no-op. Deleting first
+	# makes the check depend on the live apiserver config, not on when the
+	# Secret happened to be created.
+	"${KCTL[@]}" -n default delete secret cks-secret --ignore-not-found >/dev/null 2>&1
+	"${KCTL[@]}" -n default create secret generic cks-secret --from-literal=password=SuperSecret123 >/dev/null 2>&1
+
+	local etcd_pod
+	etcd_pod=$("${KCTL[@]}" -n kube-system get pods -l component=etcd -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+
+	local raw_value=""
+	local encrypted="false"
+	if [ -n "$etcd_pod" ]; then
+		# The etcd image is distroless (no sh), and minikube keeps the etcd certs
+		# under /var/lib/minikube/certs, so call etcdctl directly with those paths.
+		raw_value=$("${KCTL[@]}" -n kube-system exec "$etcd_pod" -- etcdctl \
+			--cacert=/var/lib/minikube/certs/etcd/ca.crt \
+			--cert=/var/lib/minikube/certs/etcd/server.crt \
+			--key=/var/lib/minikube/certs/etcd/server.key \
+			get /registry/secrets/default/cks-secret 2>/dev/null)
+		echo "$raw_value" | grep -aq "k8s:enc:" && encrypted="true"
+	fi
+	check_criterion "cks-secret is stored encrypted in etcd (k8s:enc: prefix)" "$encrypted" && ((score += 4))
+
+	# Only credit this when etcd was actually read, otherwise an unreachable
+	# etcd would look like "plaintext absent".
+	local plaintext_absent="false"
+	if [ -n "$raw_value" ] && ! echo "$raw_value" | grep -aq "SuperSecret123"; then
+		plaintext_absent="true"
+	fi
+	check_criterion "Secret plaintext value is not visible in raw etcd output" "$plaintext_absent" && ((score += 1))
+
+	Q10_SCORE=$score
+	echo "  Question 10 score: $score / 8"
+}
+
 # === END SCORING FUNCTIONS ===

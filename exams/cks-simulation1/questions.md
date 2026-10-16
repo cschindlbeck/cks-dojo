@@ -216,3 +216,30 @@ manifest to `./exam/course/9/deployment.yaml`.
 
 ---
 
+## Question 10 | etcd Encryption at Rest | 8 points
+
+|                     |                                              |
+| ------------------- | -------------------------------------------- |
+| **Points**          | 8                                            |
+| **CKS Domain**      | Supply Chain Security                        |
+| **CKS Weight**      | 20%                                          |
+| **Namespace**       | -                                            |
+| **File to create**  | `./exam/course/10/encryption-config.yaml`    |
+
+### Task
+
+Configure encryption at rest for Secrets:
+
+1. Write an `EncryptionConfiguration` (aescbc provider) to
+   `./exam/course/10/encryption-config.yaml`.
+2. Copy it onto the control-plane node at
+   `/etc/kubernetes/enc/encryption-config.yaml`.
+3. Add `--encryption-provider-config=/etc/kubernetes/enc/encryption-config.yaml`
+   to the kube-apiserver static pod manifest (alongside the flags from
+   Questions 1 and 6 - do not remove them), with a matching volume mount.
+4. Create a Secret named `cks-secret` in the `default` namespace and confirm,
+   by reading it directly out of etcd, that its value is stored encrypted
+   (prefixed `k8s:enc:`).
+
+---
+

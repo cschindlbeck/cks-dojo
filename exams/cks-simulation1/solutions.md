@@ -355,3 +355,68 @@ tag is the evidence that the finding was acted on rather than ignored.
 
 ---
 
+## Question 10 | etcd Encryption at Rest
+
+**Solution:**
+
+Generate a random 32-byte key (aescbc accepts 16, 24 or 32 bytes, base64
+encoded in the config):
+
+```bash
+head -c 32 /dev/urandom | base64
+```
+
+`./exam/course/10/encryption-config.yaml`:
+
+```yaml
+apiVersion: apiserver.config.k8s.io/v1
+kind: EncryptionConfiguration
+resources:
+  - resources:
+      - secrets
+    providers:
+      - aescbc:
+          keys:
+            - name: key1
+              secret: <base64-encoded 32-byte key from above>
+      - identity: {}
+```
+
+```bash
+minikube ssh -p cks-dojo -n cks-dojo -- sudo mkdir -p /etc/kubernetes/enc
+minikube cp -p cks-dojo ./exam/course/10/encryption-config.yaml cks-dojo:/etc/kubernetes/enc/encryption-config.yaml
+minikube ssh -p cks-dojo -n cks-dojo -- sudo chmod 600 /etc/kubernetes/enc/encryption-config.yaml
+```
+
+Add `- --encryption-provider-config=/etc/kubernetes/enc/encryption-config.yaml`
+right after `- kube-apiserver`, and a matching `volumeMounts`/`volumes` entry
+for the `/etc/kubernetes/enc` directory, in
+`/etc/kubernetes/manifests/kube-apiserver.yaml` on the control-plane node -
+keep the `--audit-*` and `--profiling=false` flags from Questions 1 and 6.
+An invalid key length or a missing mount makes kube-apiserver fail to start,
+so check `crictl ps -a` / the container logs on the node if the API stays down.
+
+```bash
+kubectl --context cks-dojo create secret generic cks-secret --from-literal=password=SuperSecret123
+
+ETCD_POD=$(kubectl --context cks-dojo -n kube-system get pods -l component=etcd -o jsonpath='{.items[0].metadata.name}')
+kubectl --context cks-dojo -n kube-system exec "$ETCD_POD" -- etcdctl \
+  --cacert=/var/lib/minikube/certs/etcd/ca.crt \
+  --cert=/var/lib/minikube/certs/etcd/server.crt \
+  --key=/var/lib/minikube/certs/etcd/server.key \
+  get /registry/secrets/default/cks-secret | hexdump -C | head
+# expect the value to start with k8s:enc:aescbc:v1:key1: and not contain "SuperSecret123" in plaintext
+```
+
+**Explanation:** without `--encryption-provider-config`, etcd stores Secret
+values as plaintext (base64 is only the API representation, not what is
+protecting them at rest). The `EncryptionConfiguration` tells kube-apiserver
+to encrypt Secret values with the `aescbc` provider before writing them to
+etcd; the `k8s:enc:` prefix in the raw etcd value is the evidence encryption
+is active. (On this minikube cluster the etcd image has no shell and the etcd
+certs live under `/var/lib/minikube/certs/etcd/`, hence the direct `etcdctl`
+call above.) Only Secrets written after the change are encrypted - existing
+ones must be rewritten (`kubectl get secrets -A -o json | kubectl replace -f -`).
+
+---
+
