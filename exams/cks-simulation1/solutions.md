@@ -420,3 +420,43 @@ ones must be rewritten (`kubectl get secrets -A -o json | kubectl replace -f -`)
 
 ---
 
+## Question 11 | Falco Runtime Security
+
+**Solution:**
+
+```bash
+helm repo add falcosecurity https://falcosecurity.github.io/charts
+helm repo update
+helm install falco falcosecurity/falco -n monitoring --kube-context cks-dojo \
+  --set tty=true --set driver.kind=modern_ebpf
+kubectl --context cks-dojo -n monitoring rollout status daemonset/falco --timeout=120s
+```
+
+Trigger the rule with an interactive shell in any running container, then
+exit it again:
+
+```bash
+kubectl --context cks-dojo -n workload-security exec -it deploy/hardened-app -- sh
+# / $ exit
+```
+
+Falco runs one pod per node and only the pod on the node hosting the
+container logs the alert, so search all Falco pods:
+
+```bash
+kubectl --context cks-dojo -n monitoring logs -l app.kubernetes.io/name=falco -c falco --tail=-1 \
+  | grep "shell was spawned in a container" | tail -n1 \
+  > ./exam/course/11/falco-alert.txt
+```
+
+**Explanation:** Falco ships with a default ruleset that flags interactive
+shells inside containers as suspicious runtime behavior; capturing that
+alert from its logs is the standard way to prove runtime detection is
+actually working, not just installed. The rule is named "Terminal shell in
+container"; the log line shows its output text ("A shell was spawned in a
+container with an attached terminal ...") at `Notice` priority, so filter on
+that text rather than on a severity such as "warning". The `-it` flags need a
+real terminal: without a TTY no event is generated.
+
+---
+

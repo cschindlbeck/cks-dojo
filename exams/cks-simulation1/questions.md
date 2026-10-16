@@ -243,3 +243,23 @@ Configure encryption at rest for Secrets:
 
 ---
 
+## Question 11 | Falco Runtime Security | 8 points
+
+|                     |                                              |
+| ------------------- | -------------------------------------------- |
+| **Points**          | 8                                            |
+| **CKS Domain**      | Monitoring, Logging and Runtime Security     |
+| **CKS Weight**      | 20%                                          |
+| **Namespace**       | `monitoring`                                 |
+| **File to create**  | `./exam/course/11/falco-alert.txt`           |
+
+### Task
+
+Deploy Falco via Helm into the `monitoring` namespace. Once it's running,
+trigger a runtime security event (e.g. get an interactive shell in any running
+container with `kubectl exec -it ... -- sh`, which trips Falco's built-in
+"Terminal shell in container" rule), then save the matching alert line from
+the Falco pod's logs to `./exam/course/11/falco-alert.txt`.
+
+---
+

@@ -428,4 +428,40 @@ score_q10() {
 	echo "  Question 10 score: $score / 8"
 }
 
+score_q11() {
+	print_header "Question 11 | Falco Runtime Security (8 points)"
+	local score=0
+	local ns="monitoring"
+
+	local falco_pod
+	falco_pod=$("${KCTL[@]}" -n "$ns" get pods -l app.kubernetes.io/name=falco -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+
+	local falco_running="false"
+	if [ -n "$falco_pod" ] && [ "$("${KCTL[@]}" -n "$ns" get pod "$falco_pod" -o jsonpath='{.status.phase}' 2>/dev/null)" = "Running" ]; then
+		falco_running="true"
+	fi
+	check_criterion "Falco is deployed and Running in $ns" "$falco_running" && ((score += 4))
+
+	# Falco's "Terminal shell in container" rule logs at Notice priority with
+	# the text "A shell was spawned in a container with an attached terminal",
+	# so match that text rather than a severity word. The saved line must also
+	# exist in the live Falco logs (one pod per node), so a hand-typed or
+	# unrelated file does not earn credit.
+	local evidence="$LOCAL_EXAM_DIR/11/falco-alert.txt"
+	local evidence_saved="false"
+	if [ -s "$evidence" ]; then
+		local alert_line
+		alert_line=$(grep -i -m1 "shell was spawned in a container" "$evidence" | tr -d '\r')
+		if [ -n "$alert_line" ]; then
+			local falco_logs
+			falco_logs=$("${KCTL[@]}" -n "$ns" logs -l app.kubernetes.io/name=falco -c falco --tail=-1 2>/dev/null)
+			echo "$falco_logs" | grep -qF -- "$alert_line" && evidence_saved="true"
+		fi
+	fi
+	check_criterion "A captured Falco alert is saved to exam/course/11/falco-alert.txt" "$evidence_saved" && ((score += 4))
+
+	Q11_SCORE=$score
+	echo "  Question 11 score: $score / 8"
+}
+
 # === END SCORING FUNCTIONS ===
