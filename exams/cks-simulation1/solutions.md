@@ -223,3 +223,29 @@ installed by `setup.sh`. The profile's default action allows every syscall
 except `chmod`/`fchmod`/`fchmodat`, which return `EPERM`.
 
 ---
+## Question 6 | kube-bench Remediation
+
+**Solution:**
+
+```bash
+kubectl --context cks-dojo apply -f ./templates/kube-bench-job.yaml
+kubectl --context cks-dojo wait --for=condition=complete job/kube-bench --timeout=120s
+kubectl --context cks-dojo logs job/kube-bench > ./exam/course/6/kube-bench-report.txt
+kubectl --context cks-dojo delete job kube-bench
+```
+
+Add `- --profiling=false` right after `- kube-apiserver` in
+`/etc/kubernetes/manifests/kube-apiserver.yaml` on the control-plane node,
+alongside the `--audit-*` flags from Question 1:
+
+```bash
+minikube ssh -p cks-dojo -n cks-dojo -- sudo cat /etc/kubernetes/manifests/kube-apiserver.yaml
+# edit, keeping the existing --audit-policy-file / --audit-log-path lines
+```
+
+**Explanation:** `--profiling=false` disables the pprof HTTP endpoints, a
+routine CIS benchmark finding since profiling exposes internal runtime data
+and adds attack surface with no operational benefit in production.
+
+---
+

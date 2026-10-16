@@ -255,4 +255,24 @@ score_q5() {
 	echo "  Question 5 score: $score / 8"
 }
 
+score_q6() {
+	print_header "Question 6 | kube-bench Remediation (6 points)"
+	local score=0
+
+	local report_saved="false"
+	[ -s "$LOCAL_EXAM_DIR/6/kube-bench-report.txt" ] && report_saved="true"
+	check_criterion "kube-bench report saved to exam/course/6/kube-bench-report.txt" "$report_saved" && ((score += 2))
+
+	local apiserver_args
+	apiserver_args=$(minikube ssh -p "$MINIKUBE_PROFILE" -n "$MINIKUBE_PROFILE" -- \
+		"ps aux | grep kube-apiserver | grep -v grep" 2>/dev/null)
+
+	local profiling_disabled="false"
+	echo "$apiserver_args" | grep -q -- "--profiling=false" && profiling_disabled="true"
+	check_criterion "kube-apiserver started with --profiling=false" "$profiling_disabled" && ((score += 4))
+
+	Q6_SCORE=$score
+	echo "  Question 6 score: $score / 6"
+}
+
 # === END SCORING FUNCTIONS ===

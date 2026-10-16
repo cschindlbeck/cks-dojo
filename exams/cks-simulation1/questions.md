@@ -130,3 +130,25 @@ container and observing it fail, then save that command's output to
 `./exam/course/5/seccomp-test.txt`.
 
 ---
+## Question 6 | kube-bench Remediation | 6 points
+
+|                     |                                              |
+| ------------------- | -------------------------------------------- |
+| **Points**          | 6                                            |
+| **CKS Domain**      | System Hardening                             |
+| **CKS Weight**      | 15%                                          |
+| **Namespace**       | -                                            |
+| **File to create**  | `./exam/course/6/kube-bench-report.txt`      |
+
+### Task
+
+Run kube-bench against the control-plane node using the provided
+`./templates/kube-bench-job.yaml`, and save its output to
+`./exam/course/6/kube-bench-report.txt`.
+
+Then remediate the finding about kube-apiserver profiling by adding
+`--profiling=false` to the kube-apiserver static pod manifest (alongside the
+audit flags already added in Question 1 - do not remove them).
+
+---
+
