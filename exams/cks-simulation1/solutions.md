@@ -228,7 +228,7 @@ except `chmod`/`fchmod`/`fchmodat`, which return `EPERM`.
 **Solution:**
 
 ```bash
-kubectl --context cks-dojo apply -f ./templates/kube-bench-job.yaml
+kubectl --context cks-dojo apply -f ./exams/cks-simulation1/templates/kube-bench-job.yaml
 kubectl --context cks-dojo wait --for=condition=complete job/kube-bench --timeout=120s
 kubectl --context cks-dojo logs job/kube-bench > ./exam/course/6/kube-bench-report.txt
 kubectl --context cks-dojo delete job kube-bench
@@ -302,7 +302,7 @@ loop, unlike images that need to write to disk or bind low ports at startup.
 ```bash
 kubectl --context cks-dojo label namespace psa-lab pod-security.kubernetes.io/enforce=restricted --overwrite
 
-kubectl --context cks-dojo apply -f ./templates/bad-pod.yaml
+kubectl --context cks-dojo apply -f ./exams/cks-simulation1/templates/bad-pod.yaml
 # expect: error validating ... violates PodSecurity "restricted:latest": ...
 ```
 

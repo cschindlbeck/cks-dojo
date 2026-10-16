@@ -143,7 +143,7 @@ container and observing it fail, then save that command's output to
 ### Task
 
 Run kube-bench against the control-plane node using the provided
-`./templates/kube-bench-job.yaml`, and save its output to
+`./exams/cks-simulation1/templates/kube-bench-job.yaml`, and save its output to
 `./exam/course/6/kube-bench-report.txt`.
 
 Then remediate the finding about kube-apiserver profiling by adding
@@ -190,7 +190,7 @@ Save the manifest to `./exam/course/7/hardened-app.yaml`.
 ### Task
 
 Label the `psa-lab` namespace to enforce the `restricted` Pod Security
-Standard. Confirm `./templates/bad-pod.yaml` (a privileged Pod) is rejected
+Standard. Confirm `./exams/cks-simulation1/templates/bad-pod.yaml` (a privileged Pod) is rejected
 once the label is applied.
 
 ---
