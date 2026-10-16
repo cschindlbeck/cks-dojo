@@ -275,4 +275,43 @@ score_q6() {
 	echo "  Question 6 score: $score / 6"
 }
 
+score_q7() {
+	print_header "Question 7 | Pod SecurityContext Hardening (10 points)"
+	local score=0
+	local ns="workload-security"
+	local deploy="hardened-app"
+
+	local run_as_non_root
+	run_as_non_root=$("${KCTL[@]}" -n "$ns" get deploy "$deploy" -o jsonpath='{.spec.template.spec.securityContext.runAsNonRoot}' 2>/dev/null)
+	check_criterion "runAsNonRoot is true" \
+		"$([ "$run_as_non_root" = "true" ] && echo true || echo false)" && ((score += 2))
+
+	local run_as_user
+	run_as_user=$("${KCTL[@]}" -n "$ns" get deploy "$deploy" -o jsonpath='{.spec.template.spec.securityContext.runAsUser}' 2>/dev/null)
+	check_criterion "runAsUser is a non-zero UID" \
+		"$([ -n "$run_as_user" ] && [ "$run_as_user" -ne 0 ] && echo true || echo false)" && ((score += 2))
+
+	local readonly_fs
+	readonly_fs=$("${KCTL[@]}" -n "$ns" get deploy "$deploy" -o jsonpath='{.spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem}' 2>/dev/null)
+	check_criterion "readOnlyRootFilesystem is true" \
+		"$([ "$readonly_fs" = "true" ] && echo true || echo false)" && ((score += 2))
+
+	local no_escalation
+	no_escalation=$("${KCTL[@]}" -n "$ns" get deploy "$deploy" -o jsonpath='{.spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation}' 2>/dev/null)
+	check_criterion "allowPrivilegeEscalation is false" \
+		"$([ "$no_escalation" = "false" ] && echo true || echo false)" && ((score += 2))
+
+	local drops_all
+	drops_all=$("${KCTL[@]}" -n "$ns" get deploy "$deploy" -o jsonpath='{.spec.template.spec.containers[0].securityContext.capabilities.drop[0]}' 2>/dev/null)
+	check_criterion "capabilities.drop includes ALL" \
+		"$([ "$drops_all" = "ALL" ] && echo true || echo false)" && ((score += 1))
+
+	local pod_running="false"
+	[ "$("${KCTL[@]}" -n "$ns" get pods -l app="$deploy" -o jsonpath='{.items[0].status.phase}' 2>/dev/null)" = "Running" ] && pod_running="true"
+	check_criterion "Pod is Running (hardening didn't break it)" "$pod_running" && ((score += 1))
+
+	Q7_SCORE=$score
+	echo "  Question 7 score: $score / 10"
+}
+
 # === END SCORING FUNCTIONS ===

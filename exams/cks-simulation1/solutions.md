@@ -249,3 +249,49 @@ and adds attack surface with no operational benefit in production.
 
 ---
 
+## Question 7 | Pod SecurityContext Hardening
+
+**Solution:**
+
+`./exam/course/7/hardened-app.yaml`:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hardened-app
+  namespace: workload-security
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hardened-app
+  template:
+    metadata:
+      labels:
+        app: hardened-app
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: hardened-app
+          image: busybox:1.36
+          command: ["sleep", "3600"]
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+```
+
+```bash
+kubectl --context cks-dojo apply -f ./exam/course/7/hardened-app.yaml
+```
+
+**Explanation:** `busybox sleep` needs no writable filesystem and no
+capabilities, so the full hardened profile applies cleanly with no crash
+loop, unlike images that need to write to disk or bind low ports at startup.
+
+---
+

@@ -152,3 +152,27 @@ audit flags already added in Question 1 - do not remove them).
 
 ---
 
+## Question 7 | Pod SecurityContext Hardening | 10 points
+
+|                     |                                              |
+| ------------------- | -------------------------------------------- |
+| **Points**          | 10                                           |
+| **CKS Domain**      | Minimize Microservice Vulnerabilities        |
+| **CKS Weight**      | 20%                                          |
+| **Namespace**       | `workload-security`                          |
+| **Resources**       | Deployment `hardened-app`                    |
+| **File to create**  | `./exam/course/7/hardened-app.yaml`          |
+
+### Task
+
+Create a Deployment named `hardened-app` in `workload-security`
+(image `busybox:1.36`, command `sleep 3600`) with:
+- `runAsNonRoot: true` and `runAsUser` set to a non-zero UID.
+- `readOnlyRootFilesystem: true`.
+- `allowPrivilegeEscalation: false`.
+- `capabilities.drop: ["ALL"]`.
+
+Save the manifest to `./exam/course/7/hardened-app.yaml`.
+
+---
+
