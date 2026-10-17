@@ -88,11 +88,17 @@ score_q2() {
 		((score += 3))
 	fi
 
-	local blocked="true"
-	if "${KCTL[@]}" -n "$ns" run netpol-test-blocked --rm -i --restart=Never --image=busybox:1.36 \
-		--overrides='{"apiVersion":"v1","metadata":{"labels":{"app":"other"}},"spec":{"containers":[{"name":"netpol-test-blocked","image":"busybox:1.36","command":["wget","-q","-T","5","-O-","http://backend-svc"]}]}}' \
-		2>/dev/null; then
-		blocked="false"
+	# Credit the block only if the test pod actually ran and wget failed inside it.
+	# A pod that never starts (e.g. broken CNI) also makes kubectl exit non-zero,
+	# which must not be mistaken for a NetworkPolicy block. The container prints a
+	# marker so "blocked" needs positive evidence, not just a failed kubectl run.
+	local blocked="false"
+	local blocked_out
+	blocked_out=$("${KCTL[@]}" -n "$ns" run netpol-test-blocked --rm -i --restart=Never --image=busybox:1.36 \
+		--overrides='{"apiVersion":"v1","metadata":{"labels":{"app":"other"}},"spec":{"containers":[{"name":"netpol-test-blocked","image":"busybox:1.36","command":["sh","-c","wget -q -T 5 -O- http://backend-svc >/dev/null 2>&1 && echo NETPOL_REACHED || echo NETPOL_BLOCKED"]}]}}' \
+		2>/dev/null)
+	if grep -q NETPOL_BLOCKED <<<"$blocked_out"; then
+		blocked="true"
 	fi
 	check_criterion "pods without app=frontend cannot reach backend-svc:80" "$blocked" && ((score += 3))
 

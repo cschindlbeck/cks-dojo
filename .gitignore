@@ -4,3 +4,6 @@ exam/course/
 
 # AI
 .serena/
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/

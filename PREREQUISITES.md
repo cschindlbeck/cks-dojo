@@ -35,6 +35,33 @@ kubectl --context cks-dojo -n kube-system get pods | grep calico
 # expect calico-node / calico-kube-controllers pods Running
 ```
 
+## Troubleshooting: Calico `Unauthorized` on a long-running cluster
+
+If the cluster runs for weeks, new pods on a node can get stuck in
+`ContainerCreating`. The pod events then show:
+
+```
+plugin type="calico" failed (add): error getting ClusterInformation: connection is unauthorized: Unauthorized
+```
+
+The Calico CNI plugin on that node can no longer authenticate to the API server.
+Scoring checks that start test pods (question 2) then fail although the solution is
+correct. Restart the `calico-node` pod on the affected node to renew its credentials:
+
+```bash
+kubectl --context cks-dojo -n kube-system get pods -o wide | grep calico-node
+kubectl --context cks-dojo -n kube-system delete pod <calico-node-pod-on-affected-node>
+kubectl --context cks-dojo -n kube-system rollout status ds/calico-node
+```
+
+Then remove leftover test pods if scoring was interrupted:
+
+```bash
+kubectl --context cks-dojo -n net-hardening delete pod netpol-test-allowed netpol-test-blocked --force --grace-period=0
+```
+
+If the problem comes back, recreate the cluster (see "Tearing down" below).
+
 ## Known limitation: AppArmor
 
 AppArmor is not exercised by this exam. It's a Linux kernel feature loaded into
