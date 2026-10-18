@@ -11,6 +11,10 @@ run against a dedicated multi-node minikube cluster.
 
 ## Quick start
 
+Run `./cks-dojo.sh` without arguments to open an interactive menu: start an
+exam, score an exam, or reset the cluster. The steps below do the same from
+the command line.
+
 1. Read [PREREQUISITES.md](PREREQUISITES.md) and start the cluster.
 2. `./cks-dojo.sh 1 setup` (add `--reset` to delete answer files from a
    previous attempt in `exam/course/`)
