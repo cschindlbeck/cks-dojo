@@ -7,6 +7,17 @@ source "$EXAM_DIR/exam.conf"
 
 KCTL=(kubectl --context "$MINIKUBE_PROFILE")
 
+RESET=false
+for arg in "$@"; do
+	case "$arg" in
+	--reset) RESET=true ;;
+	*)
+		echo "Error: unknown option '$arg' (expected '--reset')" >&2
+		exit 1
+		;;
+	esac
+done
+
 echo "Setting up $EXAM_NAME on minikube profile '$MINIKUBE_PROFILE'..."
 
 for ns in "${EXAM_NAMESPACES[@]}"; do
@@ -15,6 +26,11 @@ done
 
 mkdir -p "$REPO_ROOT/exam/course"
 for i in $(seq 1 "$TOTAL_QUESTIONS"); do
+	if [ "$RESET" = "true" ]; then
+		# Remove answer files from a previous attempt, so stale evidence
+		# cannot earn points on a fresh run.
+		find "$REPO_ROOT/exam/course/$i" -mindepth 1 -delete 2>/dev/null || true
+	fi
 	mkdir -p "$REPO_ROOT/exam/course/$i"
 done
 

@@ -75,3 +75,7 @@ used instead throughout, since it behaves identically on every supported host.
 minikube stop -p cks-dojo    # pause
 minikube delete -p cks-dojo  # remove entirely
 ```
+
+To get a clean cluster in one step, run `./cks-dojo.sh 1 recreate` from the repo
+root. It deletes the profile and starts it again with the same flags as above
+(kept in `MINIKUBE_START_ARGS` in `exams/cks-simulation1/exam.conf`).

@@ -12,12 +12,17 @@ run against a dedicated multi-node minikube cluster.
 ## Quick start
 
 1. Read [PREREQUISITES.md](PREREQUISITES.md) and start the cluster.
-2. `./cks-dojo.sh 1 setup`
+2. `./cks-dojo.sh 1 setup` (add `--reset` to delete answer files from a
+   previous attempt in `exam/course/`)
 3. Solve each question in `./exam/course/<question-number>/` (see
    `exams/cks-simulation1/questions.md`). All paths in the questions are
    relative to the repo root.
 4. `./cks-dojo.sh 1 score`
 5. Stuck? Check `exams/cks-simulation1/solutions.md`.
+
+Want a clean cluster? `./cks-dojo.sh 1 recreate` deletes the `cks-dojo`
+minikube profile, creates it again, and runs `setup --reset`. It asks for
+confirmation first; add `--yes` to skip the prompt.
 
 Prefer running things directly? `cd exams/cks-simulation1 && ./setup.sh` /
 `./run-scoring.sh` still works exactly as before - `cks-dojo.sh` is a thin
