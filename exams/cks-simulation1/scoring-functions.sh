@@ -78,7 +78,7 @@ score_q2() {
 	local allowed="false"
 	if "${KCTL[@]}" -n "$ns" run netpol-test-allowed --rm -i --restart=Never --image=busybox:1.36 \
 		--overrides='{"apiVersion":"v1","metadata":{"labels":{"app":"frontend"}},"spec":{"containers":[{"name":"netpol-test-allowed","image":"busybox:1.36","command":["wget","-q","-T","5","-O-","http://backend-svc"]}]}}' \
-		2>/dev/null; then
+		>/dev/null 2>&1; then
 		allowed="true"
 	fi
 	# Only credit-worthy when a default-deny policy is actually in effect - otherwise
