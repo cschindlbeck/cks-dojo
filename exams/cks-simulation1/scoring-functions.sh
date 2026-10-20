@@ -2,6 +2,8 @@
 # scoring-functions.sh - one score_qN() per question. Each sets a global
 # QN_SCORE and prints per-criterion pass/fail via common.sh helpers.
 
+# QN_SCORE globals are read by run-scoring.sh, which sources this file.
+# shellcheck disable=SC2034
 EXAM_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$EXAM_DIR/../.." && pwd)"
 source "$REPO_ROOT/scripts/lib/common.sh"
@@ -68,9 +70,9 @@ score_q2() {
 	# all ingress if that policy's policyTypes actually includes "Ingress" - a
 	# policy with podSelector:{} and policyTypes:[Egress] denies nothing on ingress
 	# and must not be credited as default-deny.
-	if "${KCTL[@]}" -n "$ns" get networkpolicy -o json 2>/dev/null | \
+	if "${KCTL[@]}" -n "$ns" get networkpolicy -o json 2>/dev/null |
 		jq -e '.items[] | select(.spec.podSelector == {} and (.spec.policyTypes // [] | any(. == "Ingress")))' \
-		>/dev/null 2>&1; then
+			>/dev/null 2>&1; then
 		has_default_deny="true"
 	fi
 	check_criterion "A default-deny-all NetworkPolicy is present" "$has_default_deny" && ((score += 2))
