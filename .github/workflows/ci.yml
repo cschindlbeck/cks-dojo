@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # shellcheck is preinstalled on the runner. Keep the shfmt version in
+      # sync with local development, or formatting results can differ.
+      - name: Install shfmt
+        run: |
+          go install mvdan.cc/sh/v3/cmd/shfmt@v3.14.1
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: Lint
+        run: make lint
